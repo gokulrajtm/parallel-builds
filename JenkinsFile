@@ -1,75 +1,31 @@
-DOCKER_IMAGE = params.FC_FRONTEND_UNIT_TEST_DOCKER_IMAGE
-AWS_CRED = params.FC_AWS_CRED_FILE_ID
-LOCAL_CONFIG = FC_CONFIG_LOCAL_ENVIRONMENT_FILE
+pipeline {
+    agent any
 
-pipeline{
-  agent {
-    label 'freshchat_pr_jobs'
-  }
-  options {
-        timestamps()
-        buildDiscarder(logRotator(numToKeepStr: '50'))
+    options {
+        disableConcurrentBuilds()
     }
-  stages{
-    stage('Code Checkout'){
-      steps{
-        script{
-          sh '''
-          eval $(aws ecr get-login --no-include-email --region us-east-1)
-          eval $(aws ecr get-login --no-include-email --region us-east-1 --registry-ids 724155539613)
-          '''
-          docker.image(DOCKER_IMAGE).inside('-u root:sudo -v /dev/shm:/dev/shm -v /root/tools:/root/tools -v /home/jenkins/tools:/home/jenkins/tools -v /root/.sonar/:/root/.sonar/ -v /home/ec2-user/.aws:/root/.aws --privileged')
-          {
-            echo '>>>>>>>>>>>>>>>>> Going to checkout! <<<<<<<<<<<<<<<<<<'
-            sh 'rm -rf *'
-            configFileProvider([configFile(fileId: AWS_CRED, targetLocation: "credentials")]) {
-            sh 'mkdir -p $HOME/.aws'
-            sh 'cat credentials >> /root/.aws/credentials'
-            print 'placed the aws credentials'
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building...'
+                // Add your build steps here
+                sleep 10 // Simulate long-running build
             }
-            configFileProvider([configFile(fileId: LOCAL_CONFIG, targetLocation: "config/local_environment.js"), configFile(fileId: 'f2c47da5-873f-485f-9fa7-21f9e8691891', replaceTokens: true, targetLocation: ".npmrc")]) {
-            print 'placed the local env js file'
+        }
+        stage('Test') {
+            steps {
+                echo 'Testing...'
+                // Add your test steps here
+                sleep 10 // Simulate long-running test
             }
-
-            checkout  changelog: false,
-                      poll: false,
-                      scm: [$class: 'GitSCM',
-                      branches: [[name: BRANCH]],
-                      doGenerateSubmoduleConfigurations: false,
-                      extensions: [],
-                      submoduleCfg: [],
-                      userRemoteConfigs: [
-                      [credentialsId: 'freshchat-deployer',
-                      url: 'git@github.com:freshdesk/unity_frontend.git']
-                      ]
-                ]
-            echo '>>>>>>>>>>>>>>>>> Checkout completed <<<<<<<<<<<<<<<<<<'
-          } // docker
-        } // scripts
-      } //steps
-
-    } // stage - Code Checkout
-
-    stage('Test Execution'){
-      steps{
-        script{
-          docker.image(DOCKER_IMAGE).inside('--privileged -v /root/yarn_cache/:/usr/local/share/.cache/yarn/v4/')
-          {
-            sh  '''#!/bin/bash
-            yarn install
-            ember b --prod
-            yarn bundlesize
-            '''
-          } // docker
-        } // script
-      } // steps
-    } // stage - Test Execution
-  } // stages
-  
-  post{
-    always {
-      cleanWs() //Cleanup
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deploying...'
+                // Add your deploy steps here
+                sleep 10 // Simulate long-running deploy
+            }
+        }
     }
-  } // post
-
-} // pipeline
+}
